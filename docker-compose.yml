@@ -1,7 +1,5 @@
 version: "3.4"
 
-# I've made an entry in .env "PATHTO=/root/netmaker"
-# remember kids, each path you see here "actual_path:docker_required_path"
 services:
   netmaker:
     container_name: netmaker
@@ -148,7 +146,7 @@ services:
       - ${PATHTO}/mosquitto/netmaker_mosquitto_data:/mosquitto/data
       - ${PATHTO}/mosquitto/netmaker_mosquitto_logs:/mosquitto/log
     labels:
-    # these probably need work, stolen from https://jurian.slui.mn/posts/smqttt-or-secure-mqtt-over-traefik/
+#     these probably need work, stolen from https://jurian.slui.mn/posts/smqttt-or-secure-mqtt-over-traefik/
       - traefik.enable=true
       - traefik.http.routers.mq.rule=Host(`${TRAEFIK_DOMAIN}`)
       - traefik.http.routers.mq.entrypoints=websecure
@@ -160,3 +158,5 @@ services:
       
 
 # removed volumes spec below as they are defined above
+# I've made an entry in .env "PATHTO=/root/netmaker"
+# remember kids, each path you see here "actual_path:docker_required_path"
