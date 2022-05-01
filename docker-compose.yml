@@ -1,12 +1,13 @@
-version: "3.4"
-
+version: "3.4.ish"
+# I've made an entry in .env "PATH=/root/netmaker"
+# remember kids, each path you see here "actual_path:docker_required_path"
 services:
   netmaker:
     container_name: netmaker
-    image: gravitl/netmaker:v0.12.2
+    image: gravitl/netmaker:v0.13.0
     volumes:
-      - dnsconfig:/root/config/dnsconfig
-      - sqldata:/root/data
+      - ${PATH}/dnsconfig:/root/config/dnsconfig
+      - ${PATH}/sqldata:/root/data
     cap_add: 
       - NET_ADMIN
       - NET_RAW
@@ -16,15 +17,18 @@ services:
       - net.ipv4.conf.all.src_valid_mark=1
     restart: always
     environment:
+    # change for v0.13
+      SERVER_NAME: broker.servicemax.com.au # this was in upgrade instructions- is it required?
       SERVER_HOST: "${NM_PUBLIC_IP}"
       SERVER_API_CONN_STRING: "api.${NM_BASE_DOMAIN}:443"
-      SERVER_GRPC_CONN_STRING: "grpc.${NM_BASE_DOMAIN}:443"
-      GRPC_SSL: "on"
+      # remove all grpc entries
+      #SERVER_GRPC_CONN_STRING: "grpc.${NM_BASE_DOMAIN}:443"
+      #GRPC_SSL: "on"
       DNS_MODE: "on"
       SERVER_HTTP_HOST: "api.${NM_BASE_DOMAIN}"
-      SERVER_GRPC_HOST: "grpc.${NM_BASE_DOMAIN}"
+      #SERVER_GRPC_HOST: "grpc.${NM_BASE_DOMAIN}"
       API_PORT: "8081"
-      GRPC_PORT: "50051"
+      #GRPC_PORT: "50051"
       CLIENT_MODE: "on"
       MASTER_KEY: "${NM_MASTER_KEY}"
       CORS_ALLOWED_ORIGIN: "*"
@@ -46,16 +50,17 @@ services:
       - traefik.http.routers.netmaker-api.rule=Host(`api.${NM_BASE_DOMAIN}`)
       - traefik.http.routers.netmaker-api.service=netmaker-api
       - traefik.http.services.netmaker-api.loadbalancer.server.port=8081
-      - traefik.http.routers.netmaker-grpc.entrypoints=websecure
-      - traefik.http.routers.netmaker-grpc.rule=Host(`grpc.${NM_BASE_DOMAIN}`)
-      - traefik.http.routers.netmaker-grpc.service=netmaker-grpc
-      - traefik.http.services.netmaker-grpc.loadbalancer.server.port=50051
-      - traefik.http.services.netmaker-grpc.loadbalancer.server.scheme=h2c
+      # remove grpc entries
+      #- traefik.http.routers.netmaker-grpc.entrypoints=websecure
+      #- traefik.http.routers.netmaker-grpc.rule=Host(`grpc.${NM_BASE_DOMAIN}`)
+      #- traefik.http.routers.netmaker-grpc.service=netmaker-grpc
+      #- traefik.http.services.netmaker-grpc.loadbalancer.server.port=50051
+      #- traefik.http.services.netmaker-grpc.loadbalancer.server.scheme=h2c
   netmaker-ui:
     container_name: netmaker-ui
     depends_on:
       - netmaker
-    image: gravitl/netmaker-ui:v0.12.2
+    image: gravitl/netmaker-ui:v0.13.0
     links:
       - "netmaker:api"
 #    ports:
@@ -82,13 +87,13 @@ services:
     depends_on:
       - netmaker
     image: coredns/coredns
-    command: -conf /root/dnsconfig/Corefile
+    command: -conf root/dnsconfig/Corefile
     container_name: coredns
     restart: always
     volumes:
-      - dnsconfig:/root/dnsconfig
+      - ${PATH}/dnsconfig:/root/dnsconfig
   traefik:
-    image: traefik:v2.5
+    image: traefik:v2.5.6
     container_name: traefik
     command:
       - "--log.level=INFO"
@@ -105,6 +110,7 @@ services:
       - "--providers.docker.endpoint=unix:///var/run/docker.sock"
       - "--providers.docker.exposedByDefault=false"
       - "--serverstransport.insecureskipverify=true"
+      # WARNING- exposes Traefik dashboard with no security
       - "--api.insecure=true"
       - "--api.dashboard=true"
     environment:
@@ -115,7 +121,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /PATHTO/traefik_acme.json:/acme.json
+      - ${PATH}/traefik_acme.json:/acme.json
     ports:
       - "80:80"
       - "443:443"
@@ -131,38 +137,25 @@ services:
       - traefik.http.routers.traefik.service=api@internal
       - traefik.http.services.traefik-containers.loadbalancer.server.port=8080
   mq:
-    image: eclipse-mosquitto:2.0.14
+    image: eclipse-mosquitto:2.0.11-openssl # updated image as per v0.13 upgrade instructions
     container_name: mq
     restart: unless-stopped
     ports:
       - "1883:1883"
     volumes:
-      - /PATHTO/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - mosquitto_data:/mosquitto/data
-      - mosquitto_logs:/mosquitto/log
+      - ${PATH}/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ${PATH}/mosquitto/netmaker_mosquitto_data:/mosquitto/data
+      - ${PATH}/mosquitto/netmaker_mosquitto_logs:/mosquitto/log
+    labels:
+    # these probably need work, stolen from https://jurian.slui.mn/posts/smqttt-or-secure-mqtt-over-traefik/
+      - traefik.enable=true
+      - traefik.http.routers.mq.rule=Host(`${TRAEFIK_DOMAIN}`)
+      - traefik.http.routers.mq.entrypoints=websecure
+      - traefik.http.routers.mq.tls.certresolver=dns
+      - traefik.tcp.routers.mq.rule=HostSNI(`*`)
+      - traefik.tcp.routers.mq.tls.certresolver=dns
+      - traefik.tcp.routers.mq.entrypoints=mq
+      - traefik.tcp.services.mq.loadbalancer.server.port=8883
+      
 
-volumes:
-  sqldata:
-    driver: local
-    driver_opts:
-      type: none
-      device: /PATHTO/netmaker_sqldata
-      o: bind
-  dnsconfig:
-    driver: local
-    driver_opts:
-      type: none
-      device: /PATHTO/netmaker_dnsconfig
-      o: bind
-  mosquitto_data:
-    driver: local
-    driver_opts:
-      type: none
-      device: /PATHTO/netmaker_mosquitto_data
-      o: bind
-  mosquitto_logs:
-    driver: local
-    driver_opts:
-      type: none
-      device: /PATHTO/netmaker_mosquitto_logs
-      o: bind
+# removed volumes spec below as they are defined above
