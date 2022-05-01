@@ -1,4 +1,5 @@
-version: "3.4.ish"
+version: "3.4"
+
 # I've made an entry in .env "PATHTO=/root/netmaker"
 # remember kids, each path you see here "actual_path:docker_required_path"
 services:
