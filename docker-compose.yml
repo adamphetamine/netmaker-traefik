@@ -1,13 +1,13 @@
 version: "3.4.ish"
-# I've made an entry in .env "PATH=/root/netmaker"
+# I've made an entry in .env "PATHTO=/root/netmaker"
 # remember kids, each path you see here "actual_path:docker_required_path"
 services:
   netmaker:
     container_name: netmaker
     image: gravitl/netmaker:v0.13.0
     volumes:
-      - ${PATH}/dnsconfig:/root/config/dnsconfig
-      - ${PATH}/sqldata:/root/data
+      - ${PATHTO}/dnsconfig:/root/config/dnsconfig
+      - ${PATHTO}/sqldata:/root/data
     cap_add: 
       - NET_ADMIN
       - NET_RAW
@@ -91,7 +91,7 @@ services:
     container_name: coredns
     restart: always
     volumes:
-      - ${PATH}/dnsconfig:/root/dnsconfig
+      - ${PATHTO}/dnsconfig:/root/dnsconfig
   traefik:
     image: traefik:v2.5.6
     container_name: traefik
@@ -121,7 +121,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${PATH}/traefik_acme.json:/acme.json
+      - ${PATHTO}/traefik_acme.json:/acme.json
     ports:
       - "80:80"
       - "443:443"
@@ -143,9 +143,9 @@ services:
     ports:
       - "1883:1883"
     volumes:
-      - ${PATH}/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ${PATH}/mosquitto/netmaker_mosquitto_data:/mosquitto/data
-      - ${PATH}/mosquitto/netmaker_mosquitto_logs:/mosquitto/log
+      - ${PATHTO}/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ${PATHTO}/mosquitto/netmaker_mosquitto_data:/mosquitto/data
+      - ${PATHTO}/mosquitto/netmaker_mosquitto_logs:/mosquitto/log
     labels:
     # these probably need work, stolen from https://jurian.slui.mn/posts/smqttt-or-secure-mqtt-over-traefik/
       - traefik.enable=true
