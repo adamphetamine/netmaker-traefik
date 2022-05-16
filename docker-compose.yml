@@ -3,7 +3,7 @@ version: "3.4"
 services:
   netmaker:
     container_name: netmaker
-    image: gravitl/netmaker:v0.13.0
+    image: gravitl/netmaker:v0.13.1
     volumes:
       - ${PATHTO}/dnsconfig:/root/config/dnsconfig
       - ${PATHTO}/sqldata:/root/data
@@ -14,20 +14,17 @@ services:
     sysctls:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv6.conf.all.forwarding=1
     restart: always
     environment:
-    # change for v0.13
-      SERVER_NAME: broker.servicemax.com.au # this was in upgrade instructions- is it required?
+      SERVER_NAME: "broker.${NM_BASE_DOMAIN}"
       SERVER_HOST: "${NM_PUBLIC_IP}"
       SERVER_API_CONN_STRING: "api.${NM_BASE_DOMAIN}:443"
-      # remove all grpc entries
-      #SERVER_GRPC_CONN_STRING: "grpc.${NM_BASE_DOMAIN}:443"
-      #GRPC_SSL: "on"
       DNS_MODE: "on"
       SERVER_HTTP_HOST: "api.${NM_BASE_DOMAIN}"
       #SERVER_GRPC_HOST: "grpc.${NM_BASE_DOMAIN}"
       API_PORT: "8081"
-      #GRPC_PORT: "50051"
       CLIENT_MODE: "on"
       MASTER_KEY: "${NM_MASTER_KEY}"
       CORS_ALLOWED_ORIGIN: "*"
@@ -36,30 +33,22 @@ services:
       NODE_ID: "netmaker-server-1"
       MQ_HOST: "mq"
       HOST_NETWORK: "off"
-      MANAGE_IPTABLES: "on"
-      PORT_FORWARD_SERVICES: "mq,dns"
       VERBOSITY: "1"
+      MANAGE_IPTABLES: "off"
     ports:
       - "51821-51830:51821-51830/udp"
 #      - "8081:8081"   # api endpoint exposed via traefik so not needed in ports
-#      - "50051:50051" # grpc endpoint exposed via traefik so not needed in ports
     labels:
       - traefik.enable=true
       - traefik.http.routers.netmaker-api.entrypoints=websecure
       - traefik.http.routers.netmaker-api.rule=Host(`api.${NM_BASE_DOMAIN}`)
       - traefik.http.routers.netmaker-api.service=netmaker-api
       - traefik.http.services.netmaker-api.loadbalancer.server.port=8081
-      # remove grpc entries
-      #- traefik.http.routers.netmaker-grpc.entrypoints=websecure
-      #- traefik.http.routers.netmaker-grpc.rule=Host(`grpc.${NM_BASE_DOMAIN}`)
-      #- traefik.http.routers.netmaker-grpc.service=netmaker-grpc
-      #- traefik.http.services.netmaker-grpc.loadbalancer.server.port=50051
-      #- traefik.http.services.netmaker-grpc.loadbalancer.server.scheme=h2c
   netmaker-ui:
     container_name: netmaker-ui
     depends_on:
       - netmaker
-    image: gravitl/netmaker-ui:v0.13.0
+    image: gravitl/netmaker-ui:v0.13.1
     links:
       - "netmaker:api"
 #    ports:
@@ -115,8 +104,6 @@ services:
     environment:
       - CF_DNS_API_TOKEN=${CF_API_TOKEN}
     restart: always
-    security_opt:
-      - no-new-privileges:true
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -140,21 +127,22 @@ services:
     container_name: mq
     restart: unless-stopped
     ports:
-      - "1883:1883"
+      - "127.0.0.1:1883:1883"
+      - "8883:8883"
     volumes:
       - ${PATHTO}/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
       - ${PATHTO}/mosquitto/netmaker_mosquitto_data:/mosquitto/data
       - ${PATHTO}/mosquitto/netmaker_mosquitto_logs:/mosquitto/log
-    labels:
-#     these probably need work, stolen from https://jurian.slui.mn/posts/smqttt-or-secure-mqtt-over-traefik/
-      - traefik.enable=true
-      - traefik.http.routers.mq.rule=Host(`${TRAEFIK_DOMAIN}`)
-      - traefik.http.routers.mq.entrypoints=websecure
-      - traefik.http.routers.mq.tls.certresolver=dns
-      - traefik.tcp.routers.mq.rule=HostSNI(`*`)
-      - traefik.tcp.routers.mq.tls.certresolver=dns
-      - traefik.tcp.routers.mq.entrypoints=mq
-      - traefik.tcp.services.mq.loadbalancer.server.port=8883
+#     labels:
+# #     these probably need work, stolen from https://jurian.slui.mn/posts/smqttt-or-secure-mqtt-over-traefik/
+#       - traefik.enable=true
+#       - traefik.http.routers.mq.rule=Host(`${TRAEFIK_DOMAIN}`)
+#       - traefik.http.routers.mq.entrypoints=websecure
+#       - traefik.http.routers.mq.tls.certresolver=dns
+#       - traefik.tcp.routers.mq.rule=HostSNI(`*`)
+#       - traefik.tcp.routers.mq.tls.certresolver=dns
+#       - traefik.tcp.routers.mq.entrypoints=mq
+#       - traefik.tcp.services.mq.loadbalancer.server.port=8883
       
 
 # removed volumes spec below as they are defined above
