@@ -3,10 +3,11 @@ version: "3.4"
 services:
   netmaker:
     container_name: netmaker
-    image: gravitl/netmaker:v0.13.1
+    image: gravitl/netmaker:v0.14.0
     volumes:
       - ${PATHTO}/dnsconfig:/root/config/dnsconfig
       - ${PATHTO}/sqldata:/root/data
+      - $PATHTO/certs:/root/netmaker/certs
     cap_add: 
       - NET_ADMIN
       - NET_RAW
@@ -34,7 +35,7 @@ services:
       MQ_HOST: "mq"
       HOST_NETWORK: "off"
       VERBOSITY: "1"
-      MANAGE_IPTABLES: "off"
+      MANAGE_IPTABLES: "on"
     ports:
       - "51821-51830:51821-51830/udp"
 #      - "8081:8081"   # api endpoint exposed via traefik so not needed in ports
@@ -48,7 +49,7 @@ services:
     container_name: netmaker-ui
     depends_on:
       - netmaker
-    image: gravitl/netmaker-ui:v0.13.1
+    image: gravitl/netmaker-ui:v0.14.0
     links:
       - "netmaker:api"
 #    ports:
@@ -81,7 +82,7 @@ services:
     volumes:
       - ${PATHTO}/dnsconfig:/root/dnsconfig
   traefik:
-    image: traefik:v2.5.6
+    image: traefik:v2.6
     container_name: traefik
     command:
       - "--log.level=INFO"
@@ -132,18 +133,7 @@ services:
     volumes:
       - ${PATHTO}/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
       - ${PATHTO}/mosquitto/netmaker_mosquitto_data:/mosquitto/data
-      - ${PATHTO}/mosquitto/netmaker_mosquitto_logs:/mosquitto/log
-#     labels:
-# #     these probably need work, stolen from https://jurian.slui.mn/posts/smqttt-or-secure-mqtt-over-traefik/
-#       - traefik.enable=true
-#       - traefik.http.routers.mq.rule=Host(`${TRAEFIK_DOMAIN}`)
-#       - traefik.http.routers.mq.entrypoints=websecure
-#       - traefik.http.routers.mq.tls.certresolver=dns
-#       - traefik.tcp.routers.mq.rule=HostSNI(`*`)
-#       - traefik.tcp.routers.mq.tls.certresolver=dns
-#       - traefik.tcp.routers.mq.entrypoints=mq
-#       - traefik.tcp.services.mq.loadbalancer.server.port=8883
-      
+      - ${PATHTO}/mosquitto/netmaker_mosquitto_logs:/mosquitto/log   
 
 # removed volumes spec below as they are defined above
 # I've made an entry in .env "PATHTO=/root/netmaker"
