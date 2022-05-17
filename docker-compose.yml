@@ -7,7 +7,7 @@ services:
     volumes:
       - ${PATHTO}/dnsconfig:/root/config/dnsconfig
       - ${PATHTO}/sqldata:/root/data
-      - $PATHTO/certs:/root/netmaker/certs
+      - $PATHTO/certs:/root/netmaker
     cap_add: 
       - NET_ADMIN
       - NET_RAW
