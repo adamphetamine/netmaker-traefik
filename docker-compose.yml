@@ -132,8 +132,9 @@ services:
       - "8883:8883"
     volumes:
       - ${PATHTO}/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ${PATHTO}/mosquitto/netmaker_mosquitto_data:/mosquitto/data
-      - ${PATHTO}/mosquitto/netmaker_mosquitto_logs:/mosquitto/log   
+      - $PATHTO/certs/:/mosquitto/certs/
+      - ${PATHTO}/mosquitto/data:/mosquitto/data
+      - ${PATHTO}/mosquitto/logs:/mosquitto/log   
 
 # removed volumes spec below as they are defined above
 # I've made an entry in .env "PATHTO=/root/netmaker"
